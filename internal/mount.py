@@ -157,7 +157,9 @@ class Mount:
 
         return result
 
-    def all_merge(self):
+    def concat_video(self):
+        self.logger.info('Concatenating video ...')
+
         count_videos_on_type = self.count_video_on_type()
 
         type_min = self.get_min_type(count_videos_on_type)
