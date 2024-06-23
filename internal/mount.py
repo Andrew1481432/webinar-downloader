@@ -6,9 +6,9 @@ import shutil
 class Mount:
 
     def __init__(self, logger, download_dir):
+        self.files = None
         self.logger = logger
         self.download_dir = download_dir
-        self.files = self.get_files(self.download_dir)
 
     def get_files(self, dir):
         return [f"{dir}/{file}" for file in os.listdir(self.download_dir) if not file.startswith('.')]
@@ -206,7 +206,6 @@ class Mount:
         # группу видео собираем в одно итоговое -> profit
         self.merge_group_video_to_one(result_compare_videos, self.download_dir+'/result.mp4')
 
-
     def merge_group_video_to_one(self, group_video, output_file):
         # cоздаем временную папку для промежуточных файлов
         temp_folder = "."
@@ -246,3 +245,7 @@ class Mount:
             print(e)
 
         os.remove(group_video_list_file)
+
+    def run(self):
+        self.files = self.get_files(self.download_dir)
+        self.concat_video()

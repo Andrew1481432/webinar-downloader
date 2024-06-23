@@ -1,4 +1,5 @@
 import asyncio
+import os
 from datetime import datetime
 import json
 
@@ -92,16 +93,16 @@ class Downloader:
 
         return urls, messages, files
 
-    def dump(self, data):
-        with open(f"{self.download_dir}/dump.json", "w") as f:
+    def dump(self, other_path, data):
+        with open(f"{other_path}/dump.json", "w") as f:
             json.dump(data, f, sort_keys=True, indent=4,
                       ensure_ascii=False)
 
-    def save_chat(self, min_value, messages):
+    def save_chat(self, other_path, min_value, messages):
         messages = [(int(max(row[0] - min_value, 0)), row[1], row[2]) for row in
                     list({tuple(t): t for t in messages}.values())]
 
-        with open(f"{self.download_dir}/chat.txt", "w") as f:
+        with open(f"{other_path}/chat.txt", "w") as f:
             for message in messages:
                 f.write(f"{str(message)}\n")
 
@@ -116,8 +117,6 @@ class Downloader:
         print(f"Файл {path} загружен успешно.")
 
     async def download_chunks(self, urls, files):
-        chunks_total = len(urls)
-
         async with httpx.AsyncClient(timeout=600) as client:
             tasks = [
                 asyncio.create_task(
@@ -137,7 +136,7 @@ class Downloader:
             await asyncio.gather(*tasks)
 
     async def run(self):
-        self.logger.info(
+        print(
             "Введите ссылку вебинара (пример: https://events.webinar.ru/j/21390906/100137538/record-new/1122397272) Важно без слеша в конце. Вообще нужен просто последний год, можно и его ввести"
         )
 
@@ -147,7 +146,11 @@ class Downloader:
             self.logger.info('Getting manifest ...')
             data = self.fetch_event_data(event_id)
 
-            self.dump(data)
+            other_path = self.download_dir + '/.other'
+            if not os.path.exists(other_path):
+                os.makedirs(other_path)
+
+            self.dump(other_path, data)
 
             event_logs = data["eventLogs"]
 
@@ -155,7 +158,8 @@ class Downloader:
             urls = list(set(urls))
 
             min_value = min(row[0] for row in urls)
-            self.save_chat(min_value, messages)
+
+            self.save_chat(other_path, min_value, messages)
 
             files = list(set(files))
             urls = [(row[0], row[1], row[2]) for row in urls]
