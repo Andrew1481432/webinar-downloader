@@ -3,8 +3,8 @@
 1. Создание вирутального окружения `python -m venv env`
 2. Активация виртуального окружения `source env/bin/activate`
 3. Установка зависимостей `pip install -r requirements.txt`
-4. Запуск `python download_webinar.py`
-5. Вводим ссылку на вебинар или последнее число в ссылке ![image](https://github.com/vladdd183/webinar-downloader/assets/26278260/a340bdc3-221c-4fcc-8124-4d0efb93a39f)
+4. Запуск `python main.py`
+5. Вводим ссылку на вебинар или последнее число в ссылке
 
 ### Скачивание
 
