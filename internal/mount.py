@@ -3,9 +3,10 @@ import json
 import subprocess
 import shutil
 
-class Downloader:
+class Mount:
 
-    def __init__(self, download_dir):
+    def __init__(self, logger, download_dir):
+        self.logger = logger
         self.download_dir = download_dir
         self.files = self.get_files(self.download_dir)
 
@@ -77,9 +78,8 @@ class Downloader:
         try:
             subprocess.call(command, shell=True)
         except subprocess.CalledProcessError as e:
-            print("An error occurred while running ffmpeg:")
+            self.logger.error("An error occurred while running ffmpeg:")
             print(e)
-
 
     def count_video_on_type(self):
         result = {}
@@ -105,7 +105,7 @@ class Downloader:
     def get_index_for_group(self, file):
         time_target_file = self.get_start_time(file)
 
-        min_time = 100000000
+        min_time = -1
         min_index = -1
 
         for index in range(len(self.files_min_types)):
@@ -114,7 +114,7 @@ class Downloader:
 
             diff_time = max(start_time, time_target_file) - min(start_time, time_target_file)
 
-            if diff_time < min_time:
+            if min_time < 0 or diff_time < min_time:
                 min_time = diff_time
                 min_index = index
 
@@ -125,6 +125,7 @@ class Downloader:
 
         min_time = -1
         result_file = ''
+
         for file in self.files:
             type_video = self.get_type_video(file)
             if type_video == find_type:
@@ -135,8 +136,8 @@ class Downloader:
                 if min_time < 0 or diff_time < min_time:
                     min_time = diff_time
                     result_file = file
-        return result_file
 
+        return result_file
 
     def count_files_of_min_type(self, min_type):
         return sum(1 for file in self.files if self.get_type_video(file) == min_type)
@@ -189,7 +190,7 @@ class Downloader:
 
         i = 0
         for screenshare_file in self.files:
-            # объденяем попарно в одно видео
+            # объединяем попарно в одно видео
             type_video = self.get_type_video(screenshare_file)
             if type_video == 'conference':
                 continue
@@ -205,7 +206,7 @@ class Downloader:
 
 
     def merge_group_video_to_one(self, group_video, output_file):
-        # Создаем временную папку для промежуточных файлов
+        # cоздаем временную папку для промежуточных файлов
         temp_folder = "."
         os.makedirs(temp_folder, exist_ok=True)
 
@@ -239,13 +240,7 @@ class Downloader:
         try:
             subprocess.run(ffmpeg_command, check=True)
         except subprocess.CalledProcessError as e:
-            print("An error occurred while running ffmpeg:")
+            self.logger.error("An error occurred while running ffmpeg:")
             print(e)
 
         os.remove(group_video_list_file)
-
-
-if __name__ == '__main__':
-    downloader = Downloader('downloads/2_ОСТ')
-    downloader.all_merge()
-

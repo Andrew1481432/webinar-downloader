@@ -4,12 +4,10 @@ import json
 
 import httpx
 from anyio.streams.file import FileWriteStream
-from internal.decorations.decorator import Decorator
 
 import requests
 
 class Downloader:
-    DOWNLOAD_DIR = "downloads"
 
     SKIP_MODULES = [
         "conference.add",
@@ -26,8 +24,9 @@ class Downloader:
         "eventSession.raisingHand.raised",
     ]
 
-    def __init__(self, decorator: Decorator = Decorator()):
-        self._decorator = decorator
+    def __init__(self, logger, download_dir):
+        self.logger = logger
+        self.download_dir = download_dir
 
     def fetch_event_data(self, event_id):
         params = {
@@ -94,7 +93,7 @@ class Downloader:
         return urls, messages, files
 
     def dump(self, data):
-        with open(f"{self.DOWNLOAD_DIR}/dump.json", "w") as f:
+        with open(f"{self.download_dir}/dump.json", "w") as f:
             json.dump(data, f, sort_keys=True, indent=4,
                       ensure_ascii=False)
 
@@ -102,12 +101,13 @@ class Downloader:
         messages = [(int(max(row[0] - min_value, 0)), row[1], row[2]) for row in
                     list({tuple(t): t for t in messages}.values())]
 
-        with open(f"{self.DOWNLOAD_DIR}/chat.txt", "w") as f:
+        with open(f"{self.download_dir}/chat.txt", "w") as f:
             for message in messages:
                 f.write(f"{str(message)}\n")
 
     async def download_file(self, path, url, client):
         print(f"Старт {path}")
+
         async with client.stream("GET", url) as response:
             response.raise_for_status()
             async with await FileWriteStream.from_path(path) as stream:
@@ -116,10 +116,12 @@ class Downloader:
         print(f"Файл {path} загружен успешно.")
 
     async def download_chunks(self, urls, files):
+        chunks_total = len(urls)
+
         async with httpx.AsyncClient(timeout=600) as client:
             tasks = [
                 asyncio.create_task(
-                    self.download_file(f"{self.DOWNLOAD_DIR}/{time}_{media_type}", url, client)
+                    self.download_file(f"{self.download_dir}/{time}_{media_type}", url, client)
                 )
                 for time, media_type, url in urls
             ]
@@ -127,7 +129,7 @@ class Downloader:
             tasks.extend(
                 [
                     asyncio.create_task(
-                        self.download_file(f"{self.DOWNLOAD_DIR}/FILE_{name}", url, client)
+                        self.download_file(f"{self.download_dir}/FILE_{name}", url, client)
                     )
                     for name, url in files
                 ]
@@ -135,14 +137,14 @@ class Downloader:
             await asyncio.gather(*tasks)
 
     async def run(self):
-        print("Program started...")
-
-        print(
+        self.logger.info(
             "Введите ссылку вебинара (пример: https://events.webinar.ru/j/21390906/100137538/record-new/1122397272) Важно без слеша в конце. Вообще нужен просто последний год, можно и его ввести"
         )
 
         try:
             event_id = int(input("Ссылка: ").split("/")[-1])
+
+            self.logger.info('Getting manifest ...')
             data = self.fetch_event_data(event_id)
 
             self.dump(data)
@@ -157,6 +159,8 @@ class Downloader:
 
             files = list(set(files))
             urls = [(row[0], row[1], row[2]) for row in urls]
+
+            self.logger.info("Downloading video ...")
             await self.download_chunks(urls, files)
 
         except KeyboardInterrupt:

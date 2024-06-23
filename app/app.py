@@ -1,20 +1,17 @@
-from internal.decorations.decorator import KaliDecoratorNaMinimalkax
 from internal.downloader import Downloader
-from sys import argv
-
-
+from internal.mount import Mount
+import logging
 class App:
-    @staticmethod
-    def get_params():
-        args = argv
-        # print(args)
-        if len(args) != 3:
-            return None, None
-        return args[1], args[2]
+
+    DOWNLOAD_DIR = "downloads"
 
     def __init__(self):
-        kali_decorator = KaliDecoratorNaMinimalkax()
-        self._downloader = Downloader(kali_decorator)
+        logger = logging.getLogger(__name__)
+        logging.basicConfig(format=format, level=logging.INFO)
+
+        self._downloader = Downloader(logger, self.DOWNLOAD_DIR)
+        self._mount = Mount(logger, self.DOWNLOAD_DIR)
 
     async def run(self):
         await self._downloader.run()
+        self._mount.concat_video()
