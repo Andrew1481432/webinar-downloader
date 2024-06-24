@@ -44,6 +44,8 @@ class Mount:
         return float(ffprobe_data["format"]["duration"])
 
     def merge_share_and_conf_chunks(self, screen_sharing_file, conference_file, result_file):
+        self.logger.info(f"Начало обьединения {screen_sharing_file} и {conference_file} (параллельно)")
+
         time_video_sharing = self.get_start_time(screen_sharing_file)
         time_video_conf = self.get_start_time(conference_file)
 
@@ -77,6 +79,7 @@ class Mount:
 
         try:
             subprocess.call(command, shell=True)
+            self.logger.info(f"Файл {result_file} был успешно создан с продолжительностью {end_time}.")
         except subprocess.CalledProcessError as e:
             self.logger.error("An error occurred while running ffmpeg:")
             print(e)
@@ -181,7 +184,7 @@ class Mount:
                 # Сортируем файлы по времени начала
                 sorted_new_path_grp = sorted(new_path_grp, key=lambda g: self.get_start_time_path(g, new_path))
                 # Путь к выходному файлу
-                output_file = self.download_dir + '/' + self.get_filename_path(group_video[0], new_path)
+                output_file = self.download_dir + '/' + self.get_filename_path(sorted_new_path_grp[0], new_path)
                 self.merge_group_video_to_one(sorted_new_path_grp, output_file)
 
         self.files = self.get_files(self.download_dir)
@@ -207,6 +210,8 @@ class Mount:
         self.merge_group_video_to_one(result_compare_videos, self.download_dir+'/result.mp4')
 
     def merge_group_video_to_one(self, group_video, output_file):
+        self.logger.info(f"Начало обьединения {' '.join(group_video)} (последовательно)")
+
         # cоздаем временную папку для промежуточных файлов
         temp_folder = "."
         os.makedirs(temp_folder, exist_ok=True)
@@ -240,6 +245,7 @@ class Mount:
 
         try:
             subprocess.run(ffmpeg_command, check=True)
+            self.logger.info(f"Файл {output_file} был успешно создан.")
         except subprocess.CalledProcessError as e:
             self.logger.error("An error occurred while running ffmpeg:")
             print(e)
