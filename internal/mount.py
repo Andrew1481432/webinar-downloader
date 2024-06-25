@@ -79,6 +79,7 @@ class Mount:
 
         try:
             subprocess.call(command, shell=True)
+            # check exists file
             self.logger.info(f"Файл {result_file} был успешно создан с продолжительностью {end_time}.")
         except subprocess.CalledProcessError as e:
             self.logger.error("An error occurred while running ffmpeg:")
@@ -190,24 +191,28 @@ class Mount:
         self.files = self.get_files(self.download_dir)
 
         # fixme hardcode под формат screenshare и conference
-
         result_compare_videos = []
 
-        i = 0
+        count_part = 0
         for screenshare_file in self.files:
             # объединяем попарно в одно видео
             type_video = self.get_type_video(screenshare_file)
             if type_video == 'conference':
                 continue
+
+            # check several files
             conference_file = self.find_near_video_other_type(screenshare_file, 'conference')
 
-            i += 1
-            self.merge_share_and_conf_chunks(screenshare_file,
-                                    conference_file, self.download_dir+'/'+f'part_{i}.mp4')
-            result_compare_videos.append(self.download_dir+'/'+f'part_{i}.mp4')
+            count_part += 1
 
-        # группу видео собираем в одно итоговое -> profit
-        self.merge_group_video_to_one(result_compare_videos, self.download_dir+'/result.mp4')
+            # add check...
+            self.merge_share_and_conf_chunks(screenshare_file,
+                                    conference_file, self.download_dir+'/'+f'part_{count_part}.mp4')
+            result_compare_videos.append(self.download_dir+'/'+f'part_{count_part}.mp4')
+
+        if count_part > 1:
+            # группу видео собираем в одно итоговое -> profit
+            self.merge_group_video_to_one(result_compare_videos, self.download_dir+'/result.mp4')
 
     def merge_group_video_to_one(self, group_video, output_file):
         self.logger.info(f"Начало обьединения {' '.join(group_video)} (последовательно)")
@@ -222,6 +227,8 @@ class Mount:
         # Записываем пути к файлам в соответствующие списки
         with open(group_video_list_file, "w") as file:
             file.write("\n".join(f"file '{path}'" for path in group_video))
+
+        # todo add support mount use gpu (nvidea)
 
         # Команда FFmpeg для объединения видео с использованием GPU
         ffmpeg_command = [
@@ -252,6 +259,15 @@ class Mount:
 
         os.remove(group_video_list_file)
 
+    def check_bad_files(self):
+        for file in self.get_files(self.download_dir):
+            st = os.stat(file)
+            if st.st_size < 1:
+                self.logger.info(f"find bad file "+file)
+                os.remove(file)
+
+
     def run(self):
+        self.check_bad_files()
         self.files = self.get_files(self.download_dir)
         self.concat_video()

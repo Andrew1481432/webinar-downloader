@@ -81,13 +81,14 @@ class Downloader:
                 case "mediasession.add":
                     urls.append(self.process_mediasession(data, start_time))
                 case "presentation.update":
-                    reference = data["fileReference"]
+                    if 'fileReference' in data:
+                        reference = data["fileReference"]
 
-                    if "slide" in reference:
-                        slide = reference["slide"]
-                        urls.append((event["time"] - start_time, "slide.jpg", slide["url"]))
-                    file = reference["file"]
-                    files.append((file["name"], file["url"]))
+                        if "slide" in reference:
+                            slide = reference["slide"]
+                            urls.append((event["time"] - start_time, "slide.jpg", slide["url"]))
+                        file = reference["file"]
+                        files.append((file["name"], file["url"]))
                 # case _:
                 # print(event)
 
